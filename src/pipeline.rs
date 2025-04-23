@@ -2,11 +2,14 @@
 
 use anyhow::Result;
 use log::{debug, info};
-use rust_bert::pipelines::translation::{
-    Language,
-    // You can swap in a larger checkpoint like m2m100_1.2B
-    TranslationModel,
-    TranslationModelBuilder,
+use rust_bert::pipelines::{
+    common::ModelType,
+    translation::{
+        Language,
+        // You can swap in a larger checkpoint like m2m100_1.2B
+        TranslationModel,
+        TranslationModelBuilder,
+    },
 };
 use std::cell::RefCell;
 use tch::Device;
@@ -26,7 +29,7 @@ pub fn translate_chunks(inputs: &[String]) -> Result<Vec<String>> {
             info!("🧵 Loading model on device: {:?}", device);
             let model = TranslationModelBuilder::new()
                 // Use the larger 1.2B variant for better fluency:
-                .with_model_type("m2m100_1.2B")
+                .with_model_type(ModelType::M2M100)
                 .with_device(device)
                 .with_source_languages(vec![Language::French])
                 .with_target_languages(vec![Language::English])
