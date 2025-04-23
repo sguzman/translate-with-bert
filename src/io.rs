@@ -1,31 +1,21 @@
-use anyhow::Result;
-use std::fs::{self, File};
-use std::io::{BufWriter, Write};
-use std::path::Path;
+use regex::Regex;
 
-pub fn read_file(path: &str) -> Result<String> {
-    Ok(fs::read_to_string(path)?)
-}
+/// Splits a block of text into sentences.
+pub fn split_into_sentences(text: &str) -> Vec<String> {
+    let re = Regex::new(r"(?m)(.*?[\.\?!])\s+").unwrap();
+    let mut sentences = Vec::new();
+    let mut last_end = 0;
 
-pub fn write_file(path: &str, content: &Vec<String>) -> Result<()> {
-    let joined = content.join("\n\n");
-    fs::write(path, joined)?;
-    Ok(())
-}
-
-pub fn merge_chunks(cache_dir: &str, output_path: &str) -> Result<()> {
-    let mut files: Vec<_> = fs::read_dir(cache_dir)?
-        .filter_map(Result::ok)
-        .filter(|entry| entry.file_name().to_string_lossy().starts_with("english."))
-        .collect();
-
-    files.sort_by_key(|entry| entry.file_name());
-
-    let mut output = BufWriter::new(File::create(output_path)?);
-    for entry in files {
-        let content = fs::read_to_string(entry.path())?;
-        writeln!(output, "{}\n", content)?;
+    for cap in re.captures_iter(text) {
+        if let Some(m) = cap.get(1) {
+            sentences.push(m.as_str().trim().to_string());
+            last_end = m.end();
+        }
     }
 
-    Ok(())
+    if last_end < text.len() {
+        sentences.push(text[last_end..].trim().to_string());
+    }
+
+    sentences.into_iter().filter(|s| !s.is_empty()).collect()
 }
