@@ -11,8 +11,8 @@ fn main() -> Result<()> {
     env_logger::init();
     info!("{}", "Starting French→English translator...".green());
 
-    let input_path = "data/input.txt";
-    let output_path = "data/output_en.txt";
+    let input_path = "res/french.txt";
+    let output_path = "res/english.txt";
 
     let raw_text = io::read_file(input_path)?;
     let cleaned = cleanup::clean_text(&raw_text);
