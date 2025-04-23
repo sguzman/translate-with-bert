@@ -24,7 +24,8 @@ pub fn translate_chunk(input: &[String]) -> Result<Vec<String>> {
                 .expect("Failed to initialize model");
             *cell.borrow_mut() = Some(model);
         }
-        let model = cell.borrow().as_ref().unwrap();
+        let binding = cell.borrow();
+        let model = binding.as_ref().unwrap();
         let output = model.translate(input, Some(Language::French), Some(Language::English))?;
         debug!("✅ Chunk translated");
         Ok(output)
