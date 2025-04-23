@@ -11,10 +11,7 @@ use std::{fs, path::Path};
 fn main() -> Result<()> {
     // init logger
     env_logger::Builder::from_env(Env::default().default_filter_or("info")).init();
-    info!(
-        "{}",
-        "🚀 Starting French→English translator (CPU→GPU)…".green()
-    );
+    info!("{}", "🚀 French→English (GPU batch)…".green());
 
     let input = Path::new("res/french.txt");
     let cache = Path::new(".cache");
@@ -27,7 +24,7 @@ fn main() -> Result<()> {
     let text = fs::read_to_string(input)?;
     let sentences = io::split_into_sentences(&text);
     let chunk_size = 4;
-    let chunks: Vec<_> = sentences.chunks(chunk_size).map(|c| c.to_vec()).collect();
+    let chunks: Vec<Vec<String>> = sentences.chunks(chunk_size).map(|c| c.to_vec()).collect();
     let total = chunks.len();
 
     // 2) Progress bar
@@ -39,29 +36,39 @@ fn main() -> Result<()> {
         .progress_chars("##-"),
     );
 
-    // 3) Sequential translate & cache
-    for (i, chunk) in chunks.into_iter().enumerate() {
+    // 3) Identify missing chunks
+    let mut missing_idx = Vec::new();
+    for i in 0..total {
         let path = cache.join(format!("english.{:02}.txt", i));
         if path.exists() {
             pb.inc(1);
-            continue;
+        } else {
+            missing_idx.push(i);
         }
-        info!("🔄 Translating chunk {:02}", i);
-        match pipeline::translate_chunk(&chunk) {
-            Ok(translated) => {
-                if let Err(e) = io::write_chunk(&path, &translated) {
-                    error!("Failed writing chunk {:02}: {}", i, e);
-                } else {
-                    info!("✅ Saved chunk {:02}", i);
-                }
-            }
-            Err(e) => error!("❌ Chunk {:02} failed: {}", i, e),
-        }
-        pb.inc(1);
     }
+
+    // 4) Batch-translate all missing chunks at once
+    if !missing_idx.is_empty() {
+        let batch_inputs: Vec<String> = missing_idx.iter().map(|&i| chunks[i].join(" ")).collect();
+
+        info!("🔄 Batch-translating {} chunk(s)…", missing_idx.len());
+        let translations = pipeline::translate_chunks(&batch_inputs)?;
+
+        // 5) Write each translated chunk
+        for (j, &i) in missing_idx.iter().enumerate() {
+            let path = cache.join(format!("english.{:02}.txt", i));
+            if let Err(e) = io::write_chunk(&path, &[translations[j].clone()]) {
+                error!("Failed writing chunk {:02}: {}", i, e);
+            } else {
+                info!("✅ Saved chunk {:02}", i);
+            }
+            pb.inc(1);
+        }
+    }
+
     pb.finish_with_message("✨ All chunks processed");
 
-    // 4) Merge
+    // 6) Merge into final file
     io::merge_chunks(cache, output, total)?;
     info!("🎉 Final output at {}", output.display());
 

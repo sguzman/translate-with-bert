@@ -5,13 +5,14 @@ use std::cell::RefCell;
 use tch::Device;
 
 thread_local! {
-    /// One TranslationModel per thread (here: main thread)
+    /// One `TranslationModel` per thread (here: main thread).
     static THREAD_MODEL: RefCell<Option<TranslationModel>> = RefCell::new(None);
 }
 
-/// Translate a chunk of sentences, loading the model (on GPU if available) only once.
-pub fn translate_chunk(input: &[String]) -> Result<Vec<String>> {
-    debug!("🔡 Translating {} sentence(s)", input.len());
+/// Translate a batch of “chunk-texts” all at once on GPU (if available).
+/// Each input string is one chunk (e.g. 4 sentences joined by spaces).
+pub fn translate_chunks(inputs: &[String]) -> Result<Vec<String>> {
+    debug!("🔡 Batch-translating {} chunk(s)", inputs.len());
     THREAD_MODEL.with(|cell| -> Result<Vec<String>> {
         if cell.borrow().is_none() {
             let device = Device::cuda_if_available();
@@ -26,8 +27,8 @@ pub fn translate_chunk(input: &[String]) -> Result<Vec<String>> {
         }
         let binding = cell.borrow();
         let model = binding.as_ref().unwrap();
-        let output = model.translate(input, Some(Language::French), Some(Language::English))?;
-        debug!("✅ Chunk translated");
-        Ok(output)
+        let outputs = model.translate(inputs, Some(Language::French), Some(Language::English))?;
+        debug!("✅ Batch translation done");
+        Ok(outputs)
     })
 }
