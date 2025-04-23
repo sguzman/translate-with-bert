@@ -6,13 +6,15 @@ use colored::*;
 use env_logger::Env;
 use indicatif::{ProgressBar, ProgressStyle};
 use log::{error, info};
-use rayon::prelude::*;
 use std::{fs, path::Path};
 
 fn main() -> Result<()> {
     // init logger
     env_logger::Builder::from_env(Env::default().default_filter_or("info")).init();
-    info!("{}", "🚀 Starting French→English translator...".green());
+    info!(
+        "{}",
+        "🚀 Starting French→English translator (CPU→GPU)…".green()
+    );
 
     let input = Path::new("res/french.txt");
     let cache = Path::new(".cache");
@@ -33,17 +35,16 @@ fn main() -> Result<()> {
     pb.set_style(
         ProgressStyle::with_template(
             "{spinner:.green} {pos:>4}/{len:4} [{bar:40.cyan/blue}] {elapsed_precise}",
-        )
-        .unwrap()
+        )?
         .progress_chars("##-"),
     );
 
-    // 3) Parallel translate & cache
-    chunks.into_par_iter().enumerate().for_each(|(i, chunk)| {
+    // 3) Sequential translate & cache
+    for (i, chunk) in chunks.into_iter().enumerate() {
         let path = cache.join(format!("english.{:02}.txt", i));
         if path.exists() {
             pb.inc(1);
-            return;
+            continue;
         }
         info!("🔄 Translating chunk {:02}", i);
         match pipeline::translate_chunk(&chunk) {
@@ -57,8 +58,7 @@ fn main() -> Result<()> {
             Err(e) => error!("❌ Chunk {:02} failed: {}", i, e),
         }
         pb.inc(1);
-    });
-
+    }
     pb.finish_with_message("✨ All chunks processed");
 
     // 4) Merge
