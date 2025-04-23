@@ -7,12 +7,32 @@ use env_logger::Env;
 use indicatif::{ProgressBar, ProgressStyle};
 use log::{error, info};
 use std::{fs, path::Path};
+use tch::Device;
 
 fn main() -> Result<()> {
-    // init logger
+    // 0) Init logger
     env_logger::Builder::from_env(Env::default().default_filter_or("info")).init();
-    info!("{}", "🚀 French→English (GPU batch)…".green());
 
+    // 1) Verify GPU availability
+    let device = Device::cuda_if_available();
+    match device {
+        Device::Cuda(_) => info!("🖥️  Using device: {:?}", device),
+        Device::Cpu => {
+            error!(
+                "❌ No CUDA GPU available (detected {:?}). Aborting.",
+                device
+            );
+            std::process::exit(1);
+        }
+        _ => info!("🖥️  Using device: {:?}", device),
+    }
+
+    info!(
+        "{}",
+        "🚀 Starting French→English translator (GPU batch)…".green()
+    );
+
+    // 2) Paths
     let input = Path::new("res/french.txt");
     let cache = Path::new(".cache");
     let output = Path::new("res/english.txt");
@@ -20,14 +40,14 @@ fn main() -> Result<()> {
     fs::create_dir_all(cache)?;
     info!("📂 Cache dir ready: {}", cache.display());
 
-    // 1) Read & split
+    // 3) Read & split
     let text = fs::read_to_string(input)?;
     let sentences = io::split_into_sentences(&text);
     let chunk_size = 4;
     let chunks: Vec<Vec<String>> = sentences.chunks(chunk_size).map(|c| c.to_vec()).collect();
     let total = chunks.len();
 
-    // 2) Progress bar
+    // 4) Progress bar
     let pb = ProgressBar::new(total as u64);
     pb.set_style(
         ProgressStyle::with_template(
@@ -36,29 +56,44 @@ fn main() -> Result<()> {
         .progress_chars("##-"),
     );
 
-    // 3) Identify missing chunks
+    // 5) Find missing chunks (existing ones just advance the bar)
     let mut missing_idx = Vec::new();
     for i in 0..total {
-        let path = cache.join(format!("english.{:02}.txt", i));
-        if path.exists() {
+        let p = cache.join(format!("english.{:02}.txt", i));
+        if p.exists() {
             pb.inc(1);
         } else {
             missing_idx.push(i);
         }
     }
 
-    // 4) Batch-translate all missing chunks at once
-    if !missing_idx.is_empty() {
-        let batch_inputs: Vec<String> = missing_idx.iter().map(|&i| chunks[i].join(" ")).collect();
+    // 6) Configurable batch size (via BATCH_SIZE env, default 8)
+    let batch_size = std::env::var("BATCH_SIZE")
+        .ok()
+        .and_then(|v| v.parse::<usize>().ok())
+        .unwrap_or(8);
+    info!(
+        "🔄 Translating {} missing chunk(s) in batches of {}…",
+        missing_idx.len(),
+        batch_size
+    );
 
-        info!("🔄 Batch-translating {} chunk(s)…", missing_idx.len());
-        let translations = pipeline::translate_chunks(&batch_inputs)?;
+    // 7) Process in batches
+    for batch in missing_idx.chunks(batch_size) {
+        // prepare inputs: join each chunk's sentences into one String
+        let batched_inputs: Vec<String> = batch.iter().map(|&i| chunks[i].join(" ")).collect();
 
-        // 5) Write each translated chunk
-        for (j, &i) in missing_idx.iter().enumerate() {
+        let translations = pipeline::translate_chunks(&batched_inputs)?;
+
+        // write out each translated chunk
+        for (j, &i) in batch.iter().enumerate() {
             let path = cache.join(format!("english.{:02}.txt", i));
-            if let Err(e) = io::write_chunk(&path, &[translations[j].clone()]) {
-                error!("Failed writing chunk {:02}: {}", i, e);
+            let translated_text = &translations[j];
+            // split translated_text on newlines (if any) for multi-line output
+            let lines: Vec<String> = translated_text.lines().map(str::to_string).collect();
+
+            if let Err(e) = io::write_chunk(&path, &lines) {
+                error!("❌ Failed writing chunk {:02}: {}", i, e);
             } else {
                 info!("✅ Saved chunk {:02}", i);
             }
@@ -68,7 +103,7 @@ fn main() -> Result<()> {
 
     pb.finish_with_message("✨ All chunks processed");
 
-    // 6) Merge into final file
+    // 8) Merge into final file
     io::merge_chunks(cache, output, total)?;
     info!("🎉 Final output at {}", output.display());
 
