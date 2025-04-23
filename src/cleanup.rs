@@ -1,5 +1,3 @@
-use regex::Regex;
-
 pub fn clean_text(raw: &str) -> Vec<String> {
     let mut paragraphs = vec![];
 
