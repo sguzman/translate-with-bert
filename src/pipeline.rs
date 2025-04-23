@@ -4,12 +4,16 @@ use rust_bert::pipelines::translation::{Language, TranslationModel, TranslationM
 use std::cell::RefCell;
 
 thread_local! {
-    /// One model per worker thread.
+    /// One `TranslationModel` per worker thread.
     static THREAD_MODEL: RefCell<Option<TranslationModel>> = RefCell::new(None);
 }
 
-fn get_model() -> TranslationModel {
-    THREAD_MODEL.with(|cell| {
+/// Translate a chunk (slice of sentences) in the current thread.
+/// Initializes the model once, then reuses it for subsequent calls.
+pub fn translate_chunk(input: &[String]) -> Result<Vec<String>> {
+    debug!("🔡 Translating {} sentence(s)", input.len());
+    THREAD_MODEL.with(|cell| -> Result<Vec<String>> {
+        // Initialize on first use
         if cell.borrow().is_none() {
             info!("🧵 Loading translation model in this thread...");
             let model = TranslationModelBuilder::new()
@@ -19,16 +23,10 @@ fn get_model() -> TranslationModel {
                 .expect("Failed to initialize model");
             *cell.borrow_mut() = Some(model);
         }
-        // Dereference before clone to get owned TranslationModel
-        (*cell.borrow().as_ref().unwrap()).clone()
+        // Borrow the initialized model and run translation
+        let model = cell.borrow().as_ref().unwrap();
+        let output = model.translate(input, Some(Language::French), Some(Language::English))?;
+        debug!("✅ Chunk translated");
+        Ok(output)
     })
-}
-
-/// Translate one chunk (slice of sentences).
-pub fn translate_chunk(input: &[String]) -> Result<Vec<String>> {
-    debug!("🔡 Translating {} sentence(s)", input.len());
-    let model = get_model();
-    let out = model.translate(input, Some(Language::French), Some(Language::English))?;
-    debug!("✅ Chunk translated");
-    Ok(out)
 }
