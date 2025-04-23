@@ -7,6 +7,7 @@ edition = "2024"
 anyhow = { version = "1.0.98", features = ["backtrace"] }
 colored = "3.0.0"
 env_logger = "0.11.8"
+indicatif = { version = "0.17.11", features = ["futures", "improved_unicode", "tokio", "unicode-segmentation"] }
 log = { version = "0.4.27", features = ["serde", "std"] }
 regex = { version = "1.11.1", features = ["logging", "pattern", "use_std"] }
 rust-bert = "0.23.0"
