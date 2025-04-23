@@ -1,23 +1,26 @@
 use anyhow::Result;
-use log::debug;
+use log::{debug, info};
 use rust_bert::pipelines::translation::{Language, TranslationModelBuilder};
+use std::sync::OnceLock;
 
-pub fn translate_paragraphs(paragraphs: &[String]) -> Result<Vec<String>> {
-    let model = TranslationModelBuilder::new()
-        .with_source_languages(vec![Language::French])
-        .with_target_languages(vec![Language::English])
-        .create_model()?;
+// Static model to avoid reloading in each thread
+static MODEL: OnceLock<rust_bert::pipelines::translation::TranslationModel> = OnceLock::new();
 
-    let mut results = vec![];
-    for chunk in paragraphs.chunks(4) {
-        debug!("Translating chunk of size {}", chunk.len());
-        let translations =
-            model.translate(chunk, Some(Language::French), Some(Language::English))?;
+fn get_model() -> &'static rust_bert::pipelines::translation::TranslationModel {
+    MODEL.get_or_init(|| {
+        info!("🔍 Loading Helsinki-NLP French → English translation model...");
+        TranslationModelBuilder::new()
+            .with_source_languages(vec![Language::French])
+            .with_target_languages(vec![Language::English])
+            .create_model()
+            .expect("Failed to create translation model")
+    })
+}
 
-        results.extend(translations);
-    }
-
-    debug!("Total translations made: {}", results.len());
-
-    Ok(results)
+pub fn translate_sentences(input: &[String]) -> Result<Vec<String>> {
+    debug!("🔡 Translating chunk of size {}", input.len());
+    let model = get_model();
+    let output = model.translate(input, None, Language::French, Language::English)?;
+    debug!("📤 Translation complete for {} sentence(s)", input.len());
+    Ok(output)
 }
