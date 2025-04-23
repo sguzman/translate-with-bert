@@ -24,7 +24,8 @@ pub fn translate_chunk(input: &[String]) -> Result<Vec<String>> {
             *cell.borrow_mut() = Some(model);
         }
         // Borrow the initialized model and run translation
-        let model = cell.borrow().as_ref().unwrap();
+        let binding = cell.borrow();
+        let model = binding.as_ref().unwrap();
         let output = model.translate(input, Some(Language::French), Some(Language::English))?;
         debug!("✅ Chunk translated");
         Ok(output)
