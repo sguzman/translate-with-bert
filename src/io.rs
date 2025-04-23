@@ -1,46 +1,54 @@
 use anyhow::Result;
 use colored::*;
 use log::info;
-use std::fs::{self, File};
-use std::io::{BufRead, BufReader, Write};
-use std::path::{Path, PathBuf};
+use regex::Regex;
+use std::{
+    fs::{self, File},
+    io::{BufRead, BufReader, Write},
+    path::{Path, PathBuf},
+};
 
-pub fn ensure_dir_exists(path: &Path) -> Result<()> {
-    if !path.exists() {
-        fs::create_dir_all(path)?;
-        info!(
-            "📁 Created directory: {}",
-            path.display().to_string().yellow()
-        );
+/// Split full text into sentences (keeps delimiters: ., ?, !).
+pub fn split_into_sentences(text: &str) -> Vec<String> {
+    let re = Regex::new(r"(?m)(.*?[\.\?!])\s+").unwrap();
+    let mut sentences = Vec::new();
+    let mut last = 0;
+    for cap in re.captures_iter(text) {
+        if let Some(m) = cap.get(1) {
+            sentences.push(m.as_str().trim().to_string());
+            last = m.end();
+        }
     }
-    Ok(())
+    if last < text.len() {
+        sentences.push(text[last..].trim().to_string());
+    }
+    sentences.into_iter().filter(|s| !s.is_empty()).collect()
 }
 
-pub fn read_chunk(file_path: &PathBuf) -> Result<Vec<String>> {
-    info!(
-        "📥 Reading chunk: {}",
-        file_path.display().to_string().cyan()
-    );
-    let file = File::open(file_path)?;
-    let reader = BufReader::new(file);
-    let lines: Vec<String> = reader.lines().filter_map(Result::ok).collect();
-    info!(
-        "📄 Read {} lines from {}",
-        lines.len().to_string().blue(),
-        file_path.display().to_string().cyan()
-    );
-    Ok(lines)
-}
-
-pub fn write_chunk(file_path: &PathBuf, lines: &[String]) -> Result<()> {
-    let mut file = File::create(file_path)?;
+/// Write a chunk’s lines to a file.
+pub fn write_chunk(path: &Path, lines: &[String]) -> Result<()> {
+    let mut f = File::create(path)?;
     for line in lines {
-        writeln!(file, "{}", line)?;
+        writeln!(f, "{}", line)?;
     }
     info!(
         "💾 Wrote {} lines to {}",
         lines.len().to_string().green(),
-        file_path.display().to_string().green()
+        path.display()
     );
+    Ok(())
+}
+
+/// Merge all numbered chunk files in `cache_dir` into `output`, in order.
+pub fn merge_chunks(cache_dir: &Path, output: &Path, total: usize) -> Result<()> {
+    let mut out = File::create(output)?;
+    for i in 0..total {
+        let p = cache_dir.join(format!("english.{:02}.txt", i));
+        if p.exists() {
+            let text = fs::read_to_string(&p)?;
+            writeln!(out, "{}\n", text)?;
+        }
+    }
+    info!("📦 Merged {} chunks into {}", total, output.display());
     Ok(())
 }
