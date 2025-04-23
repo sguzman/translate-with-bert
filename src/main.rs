@@ -1,5 +1,8 @@
+// src/main.rs
+
+mod cleanup;
 mod io;
-mod pipeline;
+mod pipeline; // ensure cleanup is in scope
 
 use anyhow::Result;
 use colored::*;
@@ -40,11 +43,31 @@ fn main() -> Result<()> {
     fs::create_dir_all(cache)?;
     info!("📂 Cache dir ready: {}", cache.display());
 
-    // 3) Read & split
+    // 3) Read & split into paragraphs
     let text = fs::read_to_string(input)?;
-    let sentences = io::split_into_sentences(&text);
-    let chunk_size = 4;
-    let chunks: Vec<Vec<String>> = sentences.chunks(chunk_size).map(|c| c.to_vec()).collect();
+    let mut paragraphs = io::split_into_paragraphs(&text);
+
+    // 3a) For long paragraphs, break into sliding windows
+    let max_sents = 32;
+    let overlap = 8;
+    let mut chunks = Vec::new();
+    for para in paragraphs.drain(..) {
+        let sents = io::split_into_sentences(&para);
+        if sents.len() <= max_sents {
+            chunks.push(para.clone());
+        } else {
+            let mut start = 0;
+            while start < sents.len() {
+                let end = usize::min(start + max_sents, sents.len());
+                chunks.push(sents[start..end].join(" "));
+                if end == sents.len() {
+                    break;
+                }
+                start += max_sents - overlap;
+            }
+        }
+    }
+
     let total = chunks.len();
 
     // 4) Progress bar
@@ -56,7 +79,7 @@ fn main() -> Result<()> {
         .progress_chars("##-"),
     );
 
-    // 5) Find missing chunks (existing ones just advance the bar)
+    // 5) Find missing chunks
     let mut missing_idx = Vec::new();
     for i in 0..total {
         let p = cache.join(format!("english.{:02}.txt", i));
@@ -67,11 +90,11 @@ fn main() -> Result<()> {
         }
     }
 
-    // 6) Configurable batch size (via BATCH_SIZE env, default 8)
+    // 6) Configurable batch size (via BATCH_SIZE env, default 4)
     let batch_size = std::env::var("BATCH_SIZE")
         .ok()
         .and_then(|v| v.parse::<usize>().ok())
-        .unwrap_or(8);
+        .unwrap_or(4);
     info!(
         "🔄 Translating {} missing chunk(s) in batches of {}…",
         missing_idx.len(),
@@ -80,16 +103,12 @@ fn main() -> Result<()> {
 
     // 7) Process in batches
     for batch in missing_idx.chunks(batch_size) {
-        // prepare inputs: join each chunk's sentences into one String
-        let batched_inputs: Vec<String> = batch.iter().map(|&i| chunks[i].join(" ")).collect();
-
+        let batched_inputs: Vec<String> = batch.iter().map(|&i| chunks[i].clone()).collect();
         let translations = pipeline::translate_chunks(&batched_inputs)?;
 
-        // write out each translated chunk
         for (j, &i) in batch.iter().enumerate() {
             let path = cache.join(format!("english.{:02}.txt", i));
             let translated_text = &translations[j];
-            // split translated_text on newlines (if any) for multi-line output
             let lines: Vec<String> = translated_text.lines().map(str::to_string).collect();
 
             if let Err(e) = io::write_chunk(&path, &lines) {

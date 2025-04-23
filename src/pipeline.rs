@@ -1,16 +1,23 @@
+// src/pipeline.rs
+
 use anyhow::Result;
 use log::{debug, info};
-use rust_bert::pipelines::translation::{Language, TranslationModel, TranslationModelBuilder};
+use rust_bert::pipelines::translation::{
+    Language,
+    // You can swap in a larger checkpoint like m2m100_1.2B
+    TranslationModel,
+    TranslationModelBuilder,
+};
 use std::cell::RefCell;
 use tch::Device;
 
 thread_local! {
-    /// One `TranslationModel` per thread (main thread here).
+    /// One `TranslationModel` per thread.
     static THREAD_MODEL: RefCell<Option<TranslationModel>> = RefCell::new(None);
 }
 
-/// Translate a batch of chunk-texts (each chunk is a single String)
-/// in one shot on the GPU. Initializes the model (on CUDA) once.
+/// Translate a batch of chunk-strings in one shot on the GPU.
+/// Initializes the model once (on CUDA).
 pub fn translate_chunks(inputs: &[String]) -> Result<Vec<String>> {
     debug!("🔡 Translating batch of {} chunk(s)", inputs.len());
     THREAD_MODEL.with(|cell| -> Result<Vec<String>> {
@@ -18,6 +25,8 @@ pub fn translate_chunks(inputs: &[String]) -> Result<Vec<String>> {
             let device = Device::cuda_if_available();
             info!("🧵 Loading model on device: {:?}", device);
             let model = TranslationModelBuilder::new()
+                // Use the larger 1.2B variant for better fluency:
+                .with_model_type("m2m100_1.2B")
                 .with_device(device)
                 .with_source_languages(vec![Language::French])
                 .with_target_languages(vec![Language::English])

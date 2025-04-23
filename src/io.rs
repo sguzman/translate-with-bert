@@ -1,12 +1,21 @@
+// src/io.rs
+
 use anyhow::Result;
 use colored::*;
 use log::info;
 use regex::Regex;
 use std::{
-    fs::{self, File},
+    fs::File,
     io::{Read, Write},
     path::Path,
 };
+
+use crate::cleanup;
+
+/// Split full text into paragraphs (cleaned).
+pub fn split_into_paragraphs(text: &str) -> Vec<String> {
+    cleanup::clean_text(text)
+}
 
 /// Split full text into sentences (keeping the punctuation).
 pub fn split_into_sentences(text: &str) -> Vec<String> {
