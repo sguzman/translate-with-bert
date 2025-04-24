@@ -8,9 +8,12 @@ use anyhow::Result;
 use colored::*;
 use env_logger::Env;
 use indicatif::{ProgressBar, ProgressStyle};
-use log::{error, info};
+use log::{error, info, warn};
 use std::{fs, path::Path};
 use tch::Device;
+
+// Import colored extensions
+use colored::Colorize;
 
 fn main() -> Result<()> {
     // 0) Init logger
@@ -104,7 +107,15 @@ fn main() -> Result<()> {
     // 7) Process in batches
     for batch in missing_idx.chunks(batch_size) {
         let batched_inputs: Vec<String> = batch.iter().map(|&i| chunks[i].clone()).collect();
+        let now = std::time::Instant::now();
         let translations = pipeline::translate_chunks(&batched_inputs)?;
+        let elapsed = now.elapsed();
+
+        warn!(
+            "🔡 Translated {} chunks in {} ms",
+            batch.len(),
+            elapsed.as_millis() // Corrected from as_millis() to as_millis()
+        );
 
         for (j, &i) in batch.iter().enumerate() {
             let path = cache.join(format!("english.{:02}.txt", i));
