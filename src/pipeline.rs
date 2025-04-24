@@ -11,9 +11,7 @@ use std::cell::RefCell;
 use tch::Device;
 
 use rust_bert::m2m_100::{
-    M2M100ConfigResources, // ↙ all point to facebook/m2m100_1.2B
-    M2M100ModelResources,
-    M2M100VocabResources,
+    M2M100ConfigResources, M2M100MergesResources, M2M100ModelResources, M2M100VocabResources
 };
 use rust_bert::pipelines::common::{ModelResource, ModelType};
 use rust_bert::pipelines::translation::{TranslationConfig};
@@ -43,14 +41,22 @@ pub fn cuda() -> Device {
 }
 
 pub fn build() -> TranslationModel {
-    // 1) point to the x-large weights & tokenizer
-    let model_resource = ModelResource::Torch(Box::new(RemoteResource::from_pretrained(
-        M2M100ModelResources::M2M100_1_2B, // ≈1.2 B params
+    // 1. Weights & config for the XL (1.2 B) checkpoint
+    let model_resource  = ModelResource::Torch(Box::new(RemoteResource::from_pretrained(
+        M2M100ModelResources::M2M100_1_2B,
     )));
-    let config_resource = RemoteResource::from_pretrained(M2M100ConfigResources::M2M100_1_2B);
-    let vocab_resource = RemoteResource::from_pretrained(M2M100VocabResources::M2M100_1_2B);
-    let spm_resource = RemoteResource::from_pretrained(M2M100ModelResources::M2M100_1_2B);
-    let merges_resource = Some(spm_resource);
+    let config_resource = RemoteResource::from_pretrained(
+        M2M100ConfigResources::M2M100_1_2B,
+    );
+
+    // 2. ***This is the SentencePiece model, not vocab.json!***
+    let vocab_resource  = RemoteResource::from_pretrained(
+        M2M100VocabResources::M2M100_1_2B,   // points to `spiece.model`
+    );
+
+    let merges_resource = Some(RemoteResource::from_pretrained(
+        M2M100MergesResources::M2M100_1_2B,   // merges.txt
+    ));
 
     // 2) M2M-100 can translate between ANY pair of 100 languages,
     //    so we list all of them once for src and once for tgt.
