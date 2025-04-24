@@ -2,7 +2,7 @@
 
 use anyhow::Result;
 use colored::*;
-use log::info;
+use log::{debug, info};
 use regex::Regex;
 use std::{
     fs::File,
@@ -40,7 +40,7 @@ pub fn write_chunk(path: &Path, lines: &[String]) -> Result<()> {
     for line in lines {
         writeln!(f, "{}", line)?;
     }
-    info!(
+    debug!(
         "💾 Wrote {} lines to {}",
         lines.len().to_string().green(),
         path.display()

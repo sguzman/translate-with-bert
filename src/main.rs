@@ -5,7 +5,7 @@ mod io;
 mod pipeline; // ensure cleanup is in scope
 
 use anyhow::Result;
-use colored::*;
+
 use env_logger::Env;
 use indicatif::{ProgressBar, ProgressStyle};
 use log::{error, info, warn};
@@ -111,11 +111,13 @@ fn main() -> Result<()> {
         let translations = pipeline::translate_chunks(&batched_inputs)?;
         let elapsed = now.elapsed();
 
-        warn!(
-            "🔡 Translated {} chunks in {} ms",
+        let timed = format!(
+            "🔡 Translated {} chunks in {} ms ({} seconds)",
             batch.len(),
-            elapsed.as_millis() // Corrected from as_millis() to as_millis()
+            elapsed.as_millis(), // Corrected from as_millis() to as_millis()
+            elapsed.as_secs()
         );
+        warn!("{}", timed.yellow());
 
         for (j, &i) in batch.iter().enumerate() {
             let path = cache.join(format!("english.{:02}.txt", i));

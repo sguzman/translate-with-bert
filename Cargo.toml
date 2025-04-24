@@ -14,7 +14,13 @@ indicatif = { version = "0.17.11", features = [
     "unicode-segmentation",
 ] }
 log = { version = "0.4.27", features = ["serde", "std"] }
-ort = { version = "1.16.3", features = ["download-binaries", "copy-dylibs", "fetch-models", "cuda", "compile-static"] }
+ort = { version = "1.16.3", features = [
+    "download-binaries",
+    "copy-dylibs",
+    "fetch-models",
+    "cuda",
+    "load-dynamic",
+] }
 rayon = "1.10.0"
 regex = { version = "1.11.1", features = ["logging", "pattern", "use_std"] }
 rust-bert = { version = "0.23.0", features = ["download-libtorch", "onnx"] }
