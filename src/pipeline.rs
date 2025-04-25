@@ -60,7 +60,7 @@ pub fn build() -> TranslationModel {
 
     // 2) M2M-100 can translate between ANY pair of 100 languages,
     //    so we list all of them once for src and once for tgt.
-    let source_languages = vec![Language::French]; // or .iter().collect()
+    let source_languages = vec![Language::German]; // or .iter().collect()
     let target_languages = vec![Language::English];
     let device = cuda();
 
@@ -100,7 +100,7 @@ pub fn translate_chunks(inputs: &[String]) -> Result<Vec<String>> {
         }
         let binding = cell.borrow();
         let model = binding.as_ref().unwrap();
-        let outputs = model.translate(inputs, Some(Language::French), Some(Language::English))?;
+        let outputs = model.translate(inputs, Some(Language::German), Some(Language::English))?;
         debug!("✅ Batch translation completed");
         Ok(outputs)
     })

@@ -39,7 +39,7 @@ fn main() -> Result<()> {
     );
 
     // 2) Paths
-    let input = Path::new("res/french.txt");
+    let input = Path::new("res/german.txt");
     let cache = Path::new(".cache");
     let output = Path::new("res/english.txt");
 
