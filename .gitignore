@@ -8,5 +8,4 @@ res/
 *.lock
 .env
 template/
-res/
 .cache/
