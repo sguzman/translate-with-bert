@@ -156,10 +156,10 @@ Beginner‑friendly issues are tagged **good first issue**.
 
 ## 📜 License
 
-This project is dual‑licensed under **MIT** and **Apache‑2.0**. You may choose either license.
+This project is licensed under **CC0-1.0**.
 
 ```
-SPDX-License-Identifier: MIT OR Apache-2.0
+SPDX-License-Identifier: CC0-1.0
 ```
 
 ---
