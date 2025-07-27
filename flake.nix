@@ -7,33 +7,36 @@
     rust-overlay.url = "github:oxalica/rust-overlay";
   };
 
-  outputs = { self, nixpkgs, flake-utils, rust-overlay }:
-    flake-utils.lib.eachDefaultSystem (system:
-      let
-        overlays = [ rust-overlay.overlays.default ];
-        pkgs = import nixpkgs { inherit system overlays; };
+  outputs = {
+    self,
+    nixpkgs,
+    flake-utils,
+    rust-overlay,
+  }:
+    flake-utils.lib.eachDefaultSystem (system: let
+      overlays = [rust-overlay.overlays.default];
+      pkgs = import nixpkgs {inherit system overlays;};
 
-        rustToolchain = pkgs.rust-bin.stable."1.85.0".default;
-      in {
-        packages.default = pkgs.stdenv.mkDerivation {
-          pname = "hello-rs";
-          version = "1.0.0";
+      rustToolchain = pkgs.rust-bin.stable."1.85.0".default;
+    in {
+      packages.default = pkgs.stdenv.mkDerivation {
+        pname = "hello-rs";
+        version = "1.0.0";
 
-          src = ./.;
+        src = ./.;
 
-          nativeBuildInputs = [ rustToolchain ];
+        nativeBuildInputs = [rustToolchain];
 
-          buildPhase = ''
-            cargo build --release
-          '';
+        buildPhase = ''
+          cargo build --release
+        '';
 
-          installPhase = ''
-            mkdir -p $out/bin
-            cp target/release/hello-rs $out/bin/
-          '';
-        };
+        installPhase = ''
+          mkdir -p $out/bin
+          cp target/release/hello-rs $out/bin/
+        '';
+      };
 
-        devShells.default = pkgs.mkShell { buildInputs = [ rustToolchain ]; };
-      });
+      devShells.default = pkgs.mkShell {buildInputs = [rustToolchain];};
+    });
 }
-
