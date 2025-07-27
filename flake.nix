@@ -17,7 +17,7 @@
       overlays = [rust-overlay.overlays.default];
       pkgs = import nixpkgs {inherit system overlays;};
 
-      rustToolchain = pkgs.rust-bin.stable."1.85.0".default;
+      rustToolchain = pkgs.rust-bin.stable."1.86.0".default;
     in {
       packages.default = pkgs.stdenv.mkDerivation {
         pname = "hello-rs";
