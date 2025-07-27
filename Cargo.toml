@@ -25,6 +25,7 @@ rayon = "1.10.0"
 regex = { version = "1.11.1", features = ["logging", "pattern", "use_std"] }
 rust-bert = { version = "0.23.0", features = ["download-libtorch", "onnx"] }
 tch = { version = "0.17.0", features = ["download-libtorch"] }
+clap = { version = "4.5.4", features = ["derive"] }
 
 
 # Default bin

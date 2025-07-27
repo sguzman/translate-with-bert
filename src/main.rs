@@ -9,15 +9,33 @@ use anyhow::Result;
 use env_logger::Env;
 use indicatif::{ProgressBar, ProgressStyle};
 use log::{error, info, warn};
-use std::{fs, path::Path};
+use clap::Parser;
+use std::{fs, path::{Path, PathBuf}};
 use tch::Device;
 
 // Import colored extensions
 use colored::Colorize;
 
+/// Command line arguments
+#[derive(Parser)]
+struct Cli {
+    /// Source language code (e.g. fr)
+    #[arg(long = "from", default_value = "fr")]
+    from: String,
+
+    /// Target language code (e.g. en)
+    #[arg(long = "to", default_value = "en")]
+    to: String,
+}
+
 fn main() -> Result<()> {
     // 0) Init logger
     env_logger::Builder::from_env(Env::default().default_filter_or("info")).init();
+
+    // Parse CLI options
+    let args = Cli::parse();
+    let from = args.from;
+    let to = args.to;
 
     // 1) Verify GPU availability
     let device = Device::cuda_if_available();
@@ -35,19 +53,19 @@ fn main() -> Result<()> {
 
     info!(
         "{}",
-        "🚀 Starting French→English translator (GPU batch)…".green()
+        format!("🚀 Starting {}→{} translator (GPU batch)…", from, to).green()
     );
 
     // 2) Paths
-    let input = Path::new("res/french.txt");
+    let input = PathBuf::from(format!("res/{}.txt", from));
     let cache = Path::new(".cache");
-    let output = Path::new("res/english.txt");
+    let output = PathBuf::from(format!("res/{}.txt", to));
 
     fs::create_dir_all(cache)?;
     info!("📂 Cache dir ready: {}", cache.display());
 
     // 3) Read & split into paragraphs
-    let text = fs::read_to_string(input)?;
+    let text = fs::read_to_string(&input)?;
     let mut paragraphs = io::split_into_paragraphs(&text);
 
     // 3a) For long paragraphs, break into sliding windows
@@ -136,7 +154,7 @@ fn main() -> Result<()> {
     pb.finish_with_message("✨ All chunks processed");
 
     // 8) Merge into final file
-    io::merge_chunks(cache, output, total)?;
+    io::merge_chunks(cache, &output, total)?;
     info!("🎉 Final output at {}", output.display());
 
     Ok(())
