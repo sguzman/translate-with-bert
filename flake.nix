@@ -1,42 +1,30 @@
 {
-  description = "Simple Rust Hello World using flakes";
+  description = "CLI translator";
 
   inputs = {
-    nixpkgs.url = "github:NixOS/nixpkgs/nixos-24.05";
+    nixpkgs.url = "github:NixOS/nixpkgs/nixos-unstable";
     flake-utils.url = "github:numtide/flake-utils";
-    rust-overlay.url = "github:oxalica/rust-overlay";
   };
 
-  outputs = {
-    self,
-    nixpkgs,
-    flake-utils,
-    rust-overlay,
-  }:
-    flake-utils.lib.eachDefaultSystem (system: let
-      overlays = [rust-overlay.overlays.default];
-      pkgs = import nixpkgs {inherit system overlays;};
+  outputs = { self, nixpkgs, flake-utils, ... }:
+    flake-utils.lib.eachDefaultSystem (system:
+      let
+        pkgs = import nixpkgs { inherit system; };
+      in
+      {
+        packages.default = pkgs.rustPlatform.buildRustPackage {
+          pname = "cli-translator";
+          version = "0.1.0";
+          src = ./.;
+          cargoLock.lockFile = ./Cargo.lock;
+        };
 
-      rustToolchain = pkgs.rust-bin.stable."1.86.0".default;
-    in {
-      packages.default = pkgs.stdenv.mkDerivation {
-        pname = "hello-rs";
-        version = "1.0.0";
-
-        src = ./.;
-
-        nativeBuildInputs = [rustToolchain];
-
-        buildPhase = ''
-          cargo build --release
-        '';
-
-        installPhase = ''
-          mkdir -p $out/bin
-          cp target/release/hello-rs $out/bin/
-        '';
-      };
-
-      devShells.default = pkgs.mkShell {buildInputs = [rustToolchain];};
-    });
+        devShells.default = pkgs.mkShell {
+          buildInputs = with pkgs; [
+            rustc
+            cargo
+          ];
+        };
+      });
 }
+
