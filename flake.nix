@@ -58,7 +58,7 @@
           then ./vendor
           else null;
         nativeBuildInputs = ps;
-        buildInputs = [ pkgs.openssl ];
+        buildInputs = [pkgs.openssl];
         PKG_CONFIG_PATH = "${pkgs.openssl.dev}/lib/pkgconfig";
       };
 
@@ -81,7 +81,7 @@
           else ''
             echo "🦀 No vendor directory found. Falling back to crates.io"
           '';
-        
+
         # Ensure devshell finds OpenSSL headers
         PKG_CONFIG_PATH = "${pkgs.openssl.dev}/lib/pkgconfig";
       };
