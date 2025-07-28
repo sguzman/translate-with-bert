@@ -69,10 +69,14 @@
           PKG_CONFIG_PATH = "${pkgs.openssl.dev}/lib/pkgconfig";
         };
 
-        # Ensure patch is picked up (since cargo uses [patch] already)
+        # ✅ Set PKG_CONFIG_PATH explicitly during build
+        configurePhase = ''
+          export PKG_CONFIG_PATH="${pkgs.openssl.dev}/lib/pkgconfig"
+          echo "✅ PKG_CONFIG_PATH set for OpenSSL: $PKG_CONFIG_PATH"
+        '';
+
         postPatch = ''
-          patch -d patched-crates/ort -p1 < patches/ort-system-override.patch
-          echo "✅ Patched ort crate build.rs is being used."
+          echo "✅ Patched ort crate build.rs is being used"
         '';
       };
 
