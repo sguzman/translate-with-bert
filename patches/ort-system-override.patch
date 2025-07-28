@@ -1,0 +1,14 @@
+--- a/build.rs
++++ b/build.rs
+@@
+ fn main() {
+-    let strategy = Strategy::detect();
++    let strategy = Strategy::System;
+
+-    match strategy {
+-        Strategy::Download => download_and_link(),
+-        Strategy::System => use_system_installation(),
+-    }
++    use_system_installation();
+ }
+
