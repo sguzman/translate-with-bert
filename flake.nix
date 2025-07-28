@@ -17,10 +17,8 @@
 
         rust = pkgs.rust-bin.stable.latest.default;
 
-        # Check for vendor directory
         vendorAvailable = builtins.pathExists ./vendor;
 
-        # Provide a config.toml if vendored
         cargoConfig = if vendorAvailable then
           pkgs.writeTextDir ".cargo/config.toml" ''
             [source.crates-io]
@@ -37,21 +35,25 @@
           pname = "my-rust-app";
           version = "0.1.0";
           src = ./.;
-
           cargoLock = {
             lockFile = ./Cargo.lock;
           };
-
           inherit cargoConfig;
+          CARGO_HOME = if vendorAvailable then "${cargoConfig}/.cargo" else null;
+          cargoVendorDir = if vendorAvailable then ./vendor else null;
+          nativeBuildInputs = [ rust ];
+        };
 
+        devShells.default = pkgs.mkShell {
+          name = "rust-dev-shell";
           nativeBuildInputs = [ rust ]
             ++ (if vendorAvailable then [ pkgs.cacert ] else []);
-
-          # Optional: Pass vendor path
-          CARGO_HOME = if vendorAvailable then "${cargoConfig}/.cargo" else null;
-
-          # Optional override for cargoVendorDir
-          cargoVendorDir = if vendorAvailable then ./vendor else null;
+          shellHook = if vendorAvailable then ''
+            export CARGO_HOME=${cargoConfig}/.cargo
+            echo "🦀 Using vendored Rust dependencies from ./vendor"
+          '' else ''
+            echo "🦀 No vendor directory found. Falling back to crates.io"
+          '';
         };
       });
 }
