@@ -3,6 +3,9 @@ name = "bert-trans"
 version = "0.1.0"
 edition = "2024"
 
+[patch.crates-io]
+ort = { path = "patched-crates/ort" }
+
 [dependencies]
 anyhow = { version = "1.0.98", features = ["backtrace"] }
 colored = "3.0.0"
