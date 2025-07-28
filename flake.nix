@@ -21,6 +21,11 @@
       };
 
       rust = pkgs.rust-bin.stable.latest.default;
+      ps = [
+        rust
+        pkgs.pkg-config
+        pkgs.openssl
+      ];
 
       vendorAvailable = builtins.pathExists ./vendor;
 
@@ -52,18 +57,21 @@
           if vendorAvailable
           then ./vendor
           else null;
-        nativeBuildInputs = [rust];
+        nativeBuildInputs = ps;
+        buildInputs = [ pkgs.openssl ];
+        PKG_CONFIG_PATH = "${pkgs.openssl.dev}/lib/pkgconfig";
       };
 
       devShells.default = pkgs.mkShell {
         name = "rust-dev-shell";
         nativeBuildInputs =
-          [rust]
+          ps
           ++ (
             if vendorAvailable
             then [pkgs.cacert]
             else []
           );
+
         shellHook =
           if vendorAvailable
           then ''
@@ -73,6 +81,9 @@
           else ''
             echo "🦀 No vendor directory found. Falling back to crates.io"
           '';
+        
+        # Ensure devshell finds OpenSSL headers
+        PKG_CONFIG_PATH = "${pkgs.openssl.dev}/lib/pkgconfig";
       };
     });
 }
