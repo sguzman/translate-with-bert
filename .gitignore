@@ -10,3 +10,4 @@ res/
 template/
 res/
 .cache/
+/vendor
