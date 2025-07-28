@@ -60,6 +60,20 @@
         nativeBuildInputs = ps;
         buildInputs = [pkgs.openssl];
         PKG_CONFIG_PATH = "${pkgs.openssl.dev}/lib/pkgconfig";
+
+        # Add system env to force system strategy
+        env = {
+          ORT_STRATEGY = "system";
+          ORT_LIB_LOCATION = "${./vendor/ort-binary/onnxruntime-linux-x64-gpu-1.16.0/lib}";
+          ORT_INCLUDE_LOCATION = "${./vendor/ort-binary/onnxruntime-linux-x64-gpu-1.16.0/include}";
+          PKG_CONFIG_PATH = "${pkgs.openssl.dev}/lib/pkgconfig";
+        };
+
+        # Ensure patch is picked up (since cargo uses [patch] already)
+        postPatch = ''
+          patch -d patched-crates/ort -p1 < patches/ort-system-override.patch
+          echo "✅ Patched ort crate build.rs is being used."
+        '';
       };
 
       devShells.default = pkgs.mkShell {
