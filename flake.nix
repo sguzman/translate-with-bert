@@ -66,8 +66,15 @@
           ORT_STRATEGY = "system";
           ORT_LIB_LOCATION = "${./vendor/ort-binary/onnxruntime-linux-x64-gpu-1.16.0/lib}";
           ORT_INCLUDE_LOCATION = "${./vendor/ort-binary/onnxruntime-linux-x64-gpu-1.16.0/include}";
-          PKG_CONFIG_PATH = "${pkgs.openssl.dev}/lib/pkgconfig";
         };
+
+        buildPhase = ''
+          echo "🏗️  Build phase running with:"
+          echo "  ORT_LIB_LOCATION=$ORT_LIB_LOCATION"
+          echo "  ORT_INCLUDE_LOCATION=$ORT_INCLUDE_LOCATION"
+          echo "  PKG_CONFIG_PATH=$PKG_CONFIG_PATH"
+          cargo build --release
+        '';
 
         # ✅ Set PKG_CONFIG_PATH explicitly during build
         configurePhase = ''
