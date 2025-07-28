@@ -7,19 +7,26 @@
     rust-overlay.url = "github:oxalica/rust-overlay";
   };
 
-  outputs = { self, nixpkgs, flake-utils, rust-overlay, ... }:
-    flake-utils.lib.eachDefaultSystem (system:
-      let
-        pkgs = import nixpkgs {
-          inherit system;
-          overlays = [ rust-overlay.overlays.default ];
-        };
+  outputs = {
+    self,
+    nixpkgs,
+    flake-utils,
+    rust-overlay,
+    ...
+  }:
+    flake-utils.lib.eachDefaultSystem (system: let
+      pkgs = import nixpkgs {
+        inherit system;
+        overlays = [rust-overlay.overlays.default];
+      };
 
-        rust = pkgs.rust-bin.stable.latest.default;
+      rust = pkgs.rust-bin.stable.latest.default;
 
-        vendorAvailable = builtins.pathExists ./vendor;
+      vendorAvailable = builtins.pathExists ./vendor;
 
-        cargoConfig = if vendorAvailable then
+      cargoConfig =
+        if vendorAvailable
+        then
           pkgs.writeTextDir ".cargo/config.toml" ''
             [source.crates-io]
             replace-with = "vendored-sources"
@@ -27,34 +34,45 @@
             [source.vendored-sources]
             directory = "vendor"
           ''
-        else
-          null;
-
-      in {
-        packages.default = pkgs.rustPlatform.buildRustPackage {
-          pname = "my-rust-app";
-          version = "0.1.0";
-          src = ./.;
-          cargoLock = {
-            lockFile = ./Cargo.lock;
-          };
-          inherit cargoConfig;
-          CARGO_HOME = if vendorAvailable then "${cargoConfig}/.cargo" else null;
-          cargoVendorDir = if vendorAvailable then ./vendor else null;
-          nativeBuildInputs = [ rust ];
+        else null;
+    in {
+      packages.default = pkgs.rustPlatform.buildRustPackage {
+        pname = "my-rust-app";
+        version = "0.1.0";
+        src = ./.;
+        cargoLock = {
+          lockFile = ./Cargo.lock;
         };
+        inherit cargoConfig;
+        CARGO_HOME =
+          if vendorAvailable
+          then "${cargoConfig}/.cargo"
+          else null;
+        cargoVendorDir =
+          if vendorAvailable
+          then ./vendor
+          else null;
+        nativeBuildInputs = [rust];
+      };
 
-        devShells.default = pkgs.mkShell {
-          name = "rust-dev-shell";
-          nativeBuildInputs = [ rust ]
-            ++ (if vendorAvailable then [ pkgs.cacert ] else []);
-          shellHook = if vendorAvailable then ''
+      devShells.default = pkgs.mkShell {
+        name = "rust-dev-shell";
+        nativeBuildInputs =
+          [rust]
+          ++ (
+            if vendorAvailable
+            then [pkgs.cacert]
+            else []
+          );
+        shellHook =
+          if vendorAvailable
+          then ''
             export CARGO_HOME=${cargoConfig}/.cargo
             echo "🦀 Using vendored Rust dependencies from ./vendor"
-          '' else ''
+          ''
+          else ''
             echo "🦀 No vendor directory found. Falling back to crates.io"
           '';
-        };
-      });
+      };
+    });
 }
-
