@@ -26,10 +26,11 @@
 
             # Build only the CLI crate within the workspace.
             cargoBuildOptions = ["--package" "translator-cli"];
+
+            # Naersk runs `cargo test` when doCheck = true.
             doCheck = false;
           };
 
-          # Default package → CLI
           default = translator-cli;
         };
 
@@ -39,7 +40,6 @@
             type = "app";
             program = "${self.packages.${system}.translator-cli}/bin/translator-cli";
           };
-          # Default app → CLI
           default = translator-cli;
         };
 
@@ -61,6 +61,7 @@
             # zlib
           ];
 
+          # Useful for some tooling that looks for Rust sources.
           RUST_SRC_PATH = pkgs.rustPlatform.rustLibSrc;
         };
 
