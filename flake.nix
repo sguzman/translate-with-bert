@@ -2,7 +2,7 @@
   description = "translate-with-bert: Nix flake using naersk + flake-utils (workspace: translator-cli + translator-core)";
 
   inputs = {
-    nixpkgs.url = "github:NixOS/nixpkgs/nixos-unstable";
+    nixpkgs.url = "github:NixOS/nixpkgs/nixos-25.05";
     flake-utils.url = "github:numtide/flake-utils";
     naersk.url = "github:nix-community/naersk";
   };
