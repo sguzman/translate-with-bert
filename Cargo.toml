@@ -1,6 +1,39 @@
-[workspace]
-members = [
-    "translator-core",
-    "translator-cli",
-]
-resolver = "2"
+[package]
+name = "translator"
+version = "0.1.0"
+edition = "2024"
+
+[features]
+# Keep core feature flags from the old library:
+default = []
+cuda = []
+spacy = []
+wasm = []
+
+# Gate the CLI deps behind a feature so lib-only builds don't pull clap.
+cli = ["dep:clap"]
+
+[lib]
+name = "translator"
+path = "src/lib.rs"
+
+[[bin]]
+name = "translator-cli"
+path = "src/main.rs"
+required-features = ["cli"]
+
+[dependencies]
+# union of core + cli deps
+anyhow = { version = "1.0", features = ["std"] }
+tracing = "0.1"
+tracing-subscriber = { version = "0.3", features = ["env-filter"] }
+sha2 = "0.10"
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+
+# CLI-only (gated by the `cli` feature above)
+clap = { version = "4", features = ["derive"], optional = true }
+
+[dev-dependencies]
+tempfile = "3"
+
